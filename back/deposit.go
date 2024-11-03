@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -9,6 +10,10 @@ import (
 	"os"
 	"strings"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/joho/godotenv"
 )
 
@@ -17,6 +22,13 @@ type PixKeyResponse struct {
 	ID     string `json:"id"`
 	Type   string `json:"type"`
 	Key    string `json:"key"`
+}
+
+type QRCodeResponse struct {
+	ID                     string `json:"id"`
+	Payload                string `json:"payload"`
+	AllowsMultiplePayments bool   `json:"allowsMultiplePayments"`
+	ExpirationDate         string `json:"expirationDate"`
 }
 
 /*func pix_key() (string, error) {
@@ -59,33 +71,30 @@ type PixKeyResponse struct {
 	return response.Key, nil
 }*/
 
-type QRCodeResponse struct {
-	Object string `json:"object"`
-	ID     string `json:"id"`
-	QRCode string `json:"qrCode"`
-}
-
-func create_qr_code() (string, error) {
+func create_qr_code() string {
 	err := godotenv.Load("../.env")
 	if err != nil {
 		log.Fatalf("Error loading .env file")
 	}
 
+	var aws_region string = os.Getenv("AWS_REGION")
+	tableName := "TransacoesAsaas"
+
+	cfg, err := config.LoadDefaultConfig(context.TODO(), config.WithRegion(aws_region))
+	if err != nil {
+		log.Fatalf("unable to load SDK config, %v", err)
+	}
+	svc := dynamodb.NewFromConfig(cfg)
+
 	var value float64
-	var description string
 	var pix_key string = os.Getenv("PIX_KEY")
 
 	fmt.Print("Value (R$): ")
 	fmt.Scan(&value)
-	fmt.Print("Add a description: ")
-	fmt.Scan(&description)
-	if description == "" {
-		description = "Sem descrição"
-	}
 
 	url := "https://sandbox.asaas.com/api/v3/pix/qrCodes/static"
 
-	payload := fmt.Sprintf(`{"addressKey":"%s","description":"%s","value":%.2f,"format":"PAYLOAD","allowsMultiplePayments":false}`, pix_key, description, float64(value))
+	payload := fmt.Sprintf(`{"addressKey":"%s","value":%.2f,"format":"PAYLOAD","allowsMultiplePayments":false, "expirationDate":"2024-12-31 23:59:59"}`, pix_key, float64(value))
 
 	token_key := os.Getenv("TOKEN")
 
@@ -110,10 +119,27 @@ func create_qr_code() (string, error) {
 	}
 
 	var response QRCodeResponse
-	err = json.Unmarshal(body, &response)
+
+	err = json.Unmarshal([]byte(body), &response)
+	if err != nil {
+		log.Fatalf("Erro ao desserializar JSON: %v", err)
+	}
 	if err != nil {
 		log.Fatalf("Error unmarshalling response: %v", err)
 	}
-	fmt.Println("PIX QR Code:", response.QRCode)
-	return response.QRCode, nil
+
+	item, err := attributevalue.MarshalMap(response)
+	if err != nil {
+		log.Fatalf("failed to marshal QRCodeResponse, %v", err)
+	}
+
+	_, err = svc.PutItem(context.TODO(), &dynamodb.PutItemInput{
+		TableName: aws.String(tableName),
+		Item:      item,
+	})
+	if err != nil {
+		log.Fatalf("failed to put item, %v", err)
+	}
+
+	return response.Payload
 }
