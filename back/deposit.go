@@ -31,6 +31,15 @@ type QRCodeResponse struct {
 	ExpirationDate         string `json:"expirationDate"`
 }
 
+type WebhookNotification struct {
+	Event   string `json:"event"`
+	Payment struct {
+		ID     string  `json:"id"`
+		Value  float64 `json:"value"`
+		Status string  `json:"status"`
+	} `json:"payment"`
+}
+
 /*func pix_key() (string, error) {
 	err := godotenv.Load("../.env")
 	if err != nil {
@@ -140,6 +149,5 @@ func create_qr_code() string {
 	if err != nil {
 		log.Fatalf("failed to put item, %v", err)
 	}
-
 	return response.Payload
 }
