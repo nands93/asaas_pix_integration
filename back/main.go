@@ -13,7 +13,7 @@ func main() {
 		fmt.Print("Select the operation: ")
 		fmt.Scan(&operation)
 		if operation == 1 {
-			create_qr_code()
+			fmt.Println(create_qr_code())
 		} else if operation == 2 {
 			fmt.Println("OPERATION 2")
 		} else if operation == 3 {
