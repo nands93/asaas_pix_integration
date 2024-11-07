@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+
 	"net/http"
 	"os"
 	"strings"
@@ -31,15 +32,6 @@ type QRCodeResponse struct {
 	ExpirationDate         string  `json:"expirationDate"`
 	Value                  float64 `json:"value"`
 	Description            string  `json:"description"`
-}
-
-type WebhookNotification struct {
-	Event   string `json:"event"`
-	Payment struct {
-		ID     string  `json:"id"`
-		Value  float64 `json:"value"`
-		Status string  `json:"status"`
-	} `json:"payment"`
 }
 
 /*func pix_key() (string, error) {
@@ -88,6 +80,7 @@ type WebhookNotification struct {
 // The response is unmarshalled into a QRCodeResponse struct and stored in a DynamoDB table.
 // Returns the QR code payload as a string.
 // Logs fatal errors if any step fails.
+
 func create_qr_code() string {
 	err := godotenv.Load("../.env")
 	if err != nil {
@@ -160,5 +153,19 @@ func create_qr_code() string {
 	if err != nil {
 		log.Fatalf("failed to put item, %v", err)
 	}
+
+	paymentEvent := PaymentEvent{
+		EventType: "PAYMENT_CREATED",
+		Payment: Payment{
+			ID:     response.ID,
+			Amount: response.Value,
+		},
+	}
+
+	err = sendPaymentWebhook(paymentEvent)
+	if err != nil {
+		log.Fatalf("erro ao enviar o webhook: %v", err)
+	}
+
 	return response.Payload
 }

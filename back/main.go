@@ -8,6 +8,8 @@ func main() {
 	var operation int
 	var program bool = true
 
+	go webhook_handler()
+
 	for program {
 		fmt.Println("1 - GENERATE PIX QR CODE\n2 - REQUEST A CASH OUT\n3 - EXIT")
 		fmt.Print("Select the operation: ")
