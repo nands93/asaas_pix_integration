@@ -1,3 +1,3 @@
-module github.com/nands93/convem_challange_42Rio/models
+module github.com/nands93/asaas_pix_integration/models
 
 go 1.23.2
