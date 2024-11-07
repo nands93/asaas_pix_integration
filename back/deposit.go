@@ -25,10 +25,12 @@ type PixKeyResponse struct {
 }
 
 type QRCodeResponse struct {
-	ID                     string `json:"id"`
-	Payload                string `json:"payload"`
-	AllowsMultiplePayments bool   `json:"allowsMultiplePayments"`
-	ExpirationDate         string `json:"expirationDate"`
+	ID                     string  `json:"id"`
+	Payload                string  `json:"payload"`
+	AllowsMultiplePayments bool    `json:"allowsMultiplePayments"`
+	ExpirationDate         string  `json:"expirationDate"`
+	Value                  float64 `json:"value"`
+	Description            string  `json:"description"`
 }
 
 type WebhookNotification struct {
@@ -80,6 +82,12 @@ type WebhookNotification struct {
 	return response.Key, nil
 }*/
 
+// create_qr_code() generates a QR code for a payment using the Asaas API and stores the response in a DynamoDB table.
+// It reads configuration from environment variables and a .env file, including AWS region, PIX key, and Asaas API token.
+// The function prompts the user for a payment value, creates a request payload, and sends a POST request to the Asaas API.
+// The response is unmarshalled into a QRCodeResponse struct and stored in a DynamoDB table.
+// Returns the QR code payload as a string.
+// Logs fatal errors if any step fails.
 func create_qr_code() string {
 	err := godotenv.Load("../.env")
 	if err != nil {
@@ -96,10 +104,13 @@ func create_qr_code() string {
 	svc := dynamodb.NewFromConfig(cfg)
 
 	var value float64
+	var description string
 	var pix_key string = os.Getenv("PIX_KEY")
 
 	fmt.Print("Value (R$): ")
 	fmt.Scan(&value)
+	fmt.Print("Description: ")
+	fmt.Scan(&description)
 
 	url := "https://sandbox.asaas.com/api/v3/pix/qrCodes/static"
 
@@ -131,11 +142,11 @@ func create_qr_code() string {
 
 	err = json.Unmarshal([]byte(body), &response)
 	if err != nil {
-		log.Fatalf("Erro ao desserializar JSON: %v", err)
-	}
-	if err != nil {
 		log.Fatalf("Error unmarshalling response: %v", err)
 	}
+
+	response.Value = value
+	response.Description = description
 
 	item, err := attributevalue.MarshalMap(response)
 	if err != nil {

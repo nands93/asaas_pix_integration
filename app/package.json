@@ -12,9 +12,11 @@
     "@aws-sdk/client-dynamodb": "^3.682.0",
     "@aws-sdk/lib-dynamodb": "^3.685.0",
     "aws-sdk": "^2.1691.0",
+    "dotenv": "^16.4.5",
     "next": "15.0.2",
     "react": "19.0.0-rc-02c0e824-20241028",
-    "react-dom": "19.0.0-rc-02c0e824-20241028"
+    "react-dom": "19.0.0-rc-02c0e824-20241028",
+    "ts-node": "^10.9.2"
   },
   "devDependencies": {
     "@types/node": "^20",
